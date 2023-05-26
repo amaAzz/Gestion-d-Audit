@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+// model User {
+//   id String @id @default(uuid())
+//   Name String 
+  
+// }
+enum Role {
+  USER
+  ADMIN
+  INTERVENANT
+  AUDITEUR
+  RESPONSABLE_SI
+  RESPONSABLE_PROCESSUS
+}
+
+model User {
+  id           String        @id @default(uuid())
+  first_name   String
+  last_name    String
+  email        String        @unique
+  password     String
+  role         Role          @default(USER)
+  organisation Organisation?
+  process      Process?
+  audit        Audit[]
+  actions      Action[]
+}
+
+model Organisation {
+  id            String  @id @default(uuid())
+  name          String
+  description   String? @db.Text
+  turnover      Int
+  adress        String
+  Employees     Int
+  sites         Site[]
+  it_manager    User    @relation(references: [id], fields: [it_manager_id])
+  it_manager_id String  @unique
+}
+model Site {
+  id              String       @id @default(uuid())
+  name            String
+  adress          String
+  description     String?      @db.Text
+  organisation    Organisation @relation(references: [id], fields: [organisation_id])
+  organisation_id String
+  process         Process[]
+  audit           Audit[]
+}
+model Process {
+  id                 String  @id @default(uuid())
+  name               String
+  description        String? @db.Text
+  site               Site    @relation(references: [id], fields: [siteId])
+  siteId             String
+  process_manager    User    @relation(references: [id], fields: [process_manager_id])
+  process_manager_id String  @unique
+  audit              Audit[]
+}
+model Standard {
+  id          String   @id
+  name        String?
+  description String?  @db.Text
+  clauses     Clause[]
+  audits      Audit[]
+}
+model Clause {
+  id            String   @id
+  name          String
+  requirements  String   @db.Text
+  standard      Standard @relation(references: [id], fields: [standard_id])
+  standard_id   String
+  desc_exigence String
+  etat          Etat_clause @default(non_conforme)
+}
+
+model Audit {
+  id          String     @id @default(uuid())
+  name        String
+  description String?    @db.Text
+  start_date  DateTime
+  end_date    DateTime
+  auditors    User[]
+  process     Process @relation(references: [id], fields: [process_id])
+  process_id  String
+  site        Site    @relation(references: [id], fields: [site_id])
+  site_id     String
+  standards   Standard[]
+  results     Result[]
+}
+
+model Action{
+  id          String @id @default(uuid())
+  name        String 
+  description String @db.Text
+  result      Result @relation(references: [id],fields: [result_id])
+  result_id   String
+  users       User[]
+}
+model Proof {
+  id          String @id @default(uuid())
+  files       File[]
+  description String @db.Text
+  result      Result @relation(references: [id], fields: [result_id])
+  result_id   String
+}
+
+model File {
+  id       String @id @default(uuid())
+  name     String
+  content  Bytes  @db.MediumBlob
+  proof    Proof  @relation(references: [id], fields: [proof_id])
+  proof_id String
+}
+
+model Result {
+  id          String  @id @default(uuid())
+  etat        String  
+  audit       Audit   @relation(references: [id], fields: [audit_id])
+  audit_id    String
+  proofs      Proof[]
+  actions     Action[]
+}
+
+enum Etat_clause {
+  conforme
+  non_conforme
+  non_conforme_majeur
+  non_conforme_mineur
+  observation
+  opportunite_amelioration
+}
+model History {
+  id      String @id @default(uuid())
+  user_id String
+  affected String
+  content String @db.MediumText
+}
+
